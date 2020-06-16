@@ -5,29 +5,36 @@ Created on Sat Jun 13 13:29:12 2020
 """
 
 import cv2 as cv
+import os
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 cameraNo = 0
 
-cap = cv.VideoCapture(cameraNo)
-cv.namedWindow('v')
+cam = cv.VideoCapture(cameraNo)
+v, imagesss = cam.read()
 
-# idx, img = cap.read()
+saveImgs = False
+imgCounter = 0
+
+print('Camera opened')
+
+# idx, img = cam.read()
 
 # while idx == False:
-#   cap = cv.VideoCapture(cameraNo)
-#   id, img = cap.read()
+#   cam = cv.VideoCapture(cameraNo)
+#   id, img = cam.read()
 #   print("Camera Unavailable")
 #   cameraNo += 1
 #   if cameraNo == 100:
 #     exit(5)
 
-print("cam available at", cameraNo)
-
-print('Camera opened')
+# print("Cam available at", cameraNo)
 
 # cv.namedWindow('eL')
 # cv.namedWindow('eR')
+
+# cv.namedWindow('Camera')
 
 # cv.namedWindow('erodeDilate')
 # cv.namedWindow('dilateErode')
@@ -40,7 +47,25 @@ face_cascade = cv.CascadeClassifier('mode/haarcascade_frontalface_default.xml')
 eye_cascade = cv.CascadeClassifier('mode/haarcascade_eye.xml')
 normal_eye_cascade = cv.CascadeClassifier('mode/haarcascade_eye.xml')
 
+dt = datetime.now()
+t_string = dt.strftime("%D%M%Y%H%M%S")
+
 globalLocIndexX = 0
+
+useCustomThre = True
+
+displayEyeDetectionBorder = False
+
+# Whether or not to display visuals[boxes on facial image]
+dispVisual = False
+
+# Display plot
+dispPlot = False
+
+# Display views
+dispViews = False
+
+dispEyes = True
     
 # Counters for identification
 globalCounter = 0
@@ -49,8 +74,20 @@ localCounterL = 0
 localStartR = 0
 localStartL = 0
 
+    
+#Threshold for recognizing a look R/L action
+lookRightThreshold = 226
+lookLeftThreshold = 340
+
+def nothing(x):
+    pass
+
+cv.namedWindow('Threshold Control')
+cv.createTrackbar('L [BIG]','Threshold Control',lookLeftThreshold,512,nothing)
+cv.createTrackbar('R [SMALL]','Threshold Control',lookRightThreshold,512,nothing)
+
 while True:
-    ret, frame = cap.read()
+    ret, frame = cam.read()
     if not ret: 
         cv.waitKey(3)
     
@@ -65,20 +102,16 @@ while True:
     
     
     kernelSideLen = 10
-    
-    #Threshold for recognizing a look R/L action
-    lookRightThreshold = 260
-    lookLeftThreshold = 330
-    
+
     # Identifiation rules
-    maxDelayIndex = 10
-    minIdentify = 5
+    maxDelayIndex = 6
+    minIdentifyL = 4
+    minIdentifyR = 4
     
     # Config for eye identification
     eyeFaceRatioMax = 3.2
     eyeFaceRatioMin = 4.5
     eyeDetectionRange = 2/5
-    displayEyeDetectionBorder = False
     
     # Thresholds for binary processing
     lowAbsThre = 60
@@ -87,15 +120,6 @@ while True:
     # Thresholds for the Canny algorithm
     lowAbsThreCanny = 80
     highAbsThreCanny = 255
-    
-    # Whether or not to display visuals[boxes on facial image]
-    dispVisual = True
-    
-    # Display plot
-    dispPlot = True
-    
-    # Display views
-    dispViews = True
     
     #The final eye output
     finalEyeLocs = []
@@ -131,18 +155,31 @@ while True:
           if dispVisual:
             cv.rectangle(frame, (x1, y1), (x1+w1,y1+h1), (0, 0, 255), 2)
     
-    eyeImgs = []
-    coloredEyeImgs = []
-    
-    for (x1, y1, w1, h1) in finalEyeLocs:
-      eyeImgs.append(grey[(y+y1):(y+y1+h1),x+x1:(x+x1+w1)])
-      coloredEyeImgs.append(frameCopy[(y+y1):(y+y1+h1),x+x1:(x+x1+w1)])
-    
     # if len(eyeImgs) > 1:
     #   cv.imshow("eL",eyeImgs[0])
     #   cv.imshow("eR",eyeImgs[1])
     
     if len(finalEyeLocs) > 1:
+      if not finalEyeLocs[1][0] > finalEyeLocs[0][1]:
+        temp = finalEyeLocs[0]
+        finalEyeLocs[0] = finalEyeLocs[1]
+        finalEyeLocs[1] = temp
+      
+      eyeImgs = []
+      coloredEyeImgs = []
+      
+      for (x1, y1, w1, h1) in finalEyeLocs:
+        eyeImgs.append(grey[(y+y1):(y+y1+h1),x+x1:(x+x1+w1)])
+        coloredEyeImgs.append(frameCopy[(y+y1):(y+y1+h1),x+x1:(x+x1+w1)])
+      
+      if saveImgs:
+        path = 'L:/OneDrive/Projects/Software/eyeDetectionCV/imgs/' + t_string + "/"
+        cv.imwrite(os.path.join(path , 'L' + str(imgCounter) + '.jpg'), coloredEyeImgs[0])
+        cv.waitKey(0)
+        
+        cv.imwrite(os.path.join(path , 'R' + str(imgCounter) + '.jpg'), coloredEyeImgs[1])
+        cv.waitKey(0)
+      
       # defining image processing kernel
       kernel = cv.getStructuringElement(cv.MORPH_RECT, (kernelSideLen, kernelSideLen))
       
@@ -246,7 +283,11 @@ while True:
         center1 = (int(xCNT1),int(yCNT1))
         radius1 = int(radius1)
         cv.circle(coloredEyeImgs[1], center1, radius1, (255, 255, 0), 2)
-        
+
+        if dispEyes:
+            cv.imshow("eyeImg0", coloredEyeImgs[0])
+            cv.imshow("eyeImg1", coloredEyeImgs[1])
+
         globalLocIndexX = xCNT0 + xCNT1
         
         if dispPlot:
@@ -255,30 +296,36 @@ while True:
           plt.plot(xCNT1, yCNT1, "bo")
         
       # Judging which diretion is being looked at
-      if globalLocIndexX < lookRightThreshold:
+      
+      barThreR = cv.getTrackbarPos('R [SMALL]','Threshold Control')
+      barThreL = cv.getTrackbarPos('L [BIG]','Threshold Control')
+      
+      if globalLocIndexX < barThreR if useCustomThre else lookRightThreshold:
         print("Right Threshold Reached \t@GlobalIndex#", globalCounter, "\t@GlobalLoc", globalLocIndexX)
         if localCounterR == 0:
           localStartR = globalCounter
         localCounterR += 1
       
-      if globalLocIndexX > lookLeftThreshold:
-        print("Left Threshold Reached \t@GlobalIndex#", globalCounter, "\t@GlobalLoc", globalLocIndexX)
+      if globalLocIndexX > barThreL if useCustomThre else lookLeftThreshold:
+        print("Left Threshold Reached \t\t@GlobalIndex#", globalCounter, "\t@GlobalLoc", globalLocIndexX)
         if localCounterL == 0:
           localStartL = globalCounter
         localCounterL += 1
         
       if globalCounter - localStartL > maxDelayIndex:
+        if localCounterL != 0: print("Left COUNTER CLEARED")
         localCounterL = 0
         
       if globalCounter - localStartR > maxDelayIndex:
+        if localCounterR != 0: print("Right COUNTER CLEARED")
         localCounterR = 0
         
-      if localCounterR >= minIdentify:
-        print("\t\t\tYou Looked Right!")
+      if localCounterR >= minIdentifyR:
+        print(">\tR\t>\tR\t>\tR\t>\tR\t>")
         localCounterR = 0
       
-      if localCounterL >= minIdentify:
-        print("\t\t\tYou Looked Left!")
+      if localCounterL >= minIdentifyL:
+        print("<\tL\t<\tL\t<\tL\t<\tL\t<")
         localCounterL = 0
       
       
@@ -302,17 +349,13 @@ while True:
         
         cv.imshow("binaryImg0", binaryImg0)
         cv.imshow("binaryImg1", binaryImg1)
-        
-        cv.imshow("eyeImg0", coloredEyeImgs[0])
-        cv.imshow("eyeImg1", coloredEyeImgs[1])
       
     # Increase loop time stamp counter
     globalCounter += 1
+     
+    # cv.imshow('Camera', frame)
+    cv.imshow('Threshold Control',frame)
     
-    # Display piture of 
-    cv.imshow('v', frame)
-    
-    # Plot eye location scatter plots
     if dispPlot:
       plt.ylabel("Y Loc")
       plt.xlabel("X Loc")
@@ -323,4 +366,5 @@ while True:
     if keyvalue & 0xff == ord('q'):
         break
 
+cam.release()
 cv.destroyAllWindows()
