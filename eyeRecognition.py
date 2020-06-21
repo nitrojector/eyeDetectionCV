@@ -6,8 +6,13 @@ Created on Sat Jun 13 13:29:12 2020
 
 import cv2 as cv
 import os
+import sys
+import bluetooth as ble
 import matplotlib.pyplot as plt
 from datetime import datetime
+
+
+
 
 cameraNo = 0
 

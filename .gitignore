@@ -6,6 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
+# Custom
+/1199_44357_bundle_archive.zip
+/项目想法提案.docx
+/midway progress.pptx
+.idea
+/docs
+
 # Distribution / packaging
 .Python
 build/
