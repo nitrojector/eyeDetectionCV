@@ -52,13 +52,16 @@ dt = datetime.now()
 t_string = dt.strftime("%D%M%Y%H%M%S")
 
 globalLocIndexX = 0
+globalLocIndexY = 0
 
-useCustomThre = True
+useCustomThreshold = True
 
 displayEyeDetectionBorder = False
 
 # Whether or not to display visuals[boxes on facial image]
 dispVisual = False
+
+dispUselessVisual = False
 
 # Display plot
 dispPlot = False
@@ -76,42 +79,66 @@ localStartR = 0
 localStartL = 0
 
     
-#Threshold for recognizing a look R/L action
+# Threshold for recognizing a look R/L action
 lookRightThreshold = 226
 lookLeftThreshold = 340
+
+txt = ''
+nearby_devices = 0
+
 
 def nothing(x):
     pass
 
-cv.namedWindow('Threshold Control')
 
-# bluetooth connection
-nearby_devices = bluetooth.discover_devices(duration=8, lookup_names=True,
-                                            flush_cache=True, lookup_class=False)
-
-print("Found {} devices".format(len(nearby_devices)))
-
-for index in range(len(nearby_devices)):
+def connectBLE():
+    global s
     try:
-        print("{}   {} - {}".format(index, nearby_devices[index][0], nearby_devices[index][1]))
-    except UnicodeEncodeError:
-        print(
-            "{}   {} - {}".format(index, nearby_devices[index][0], nearby_devices[index][1].encode("utf-8", "replace")))
-txt = input("Enter the No. of the device to connect(R for re-scan): ")
+        s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+        s.connect((addr, port))
+    except bluetooth.btcommon.BluetoothError as err:
+        print("Bluetooth Error, reconnecting...")
+        connectBLE()
+        pass
 
-deviceNo = int(txt)
 
-name = nearby_devices[deviceNo][1]
-addr = nearby_devices[deviceNo][0]
-port = 1
-passkey = "1234"
+def scanBLE():
+    global txt
+    global nearby_devices
+    print("Scanning for devices...")
 
-try:
-    s = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-    s.connect((addr, port))
-except bluetooth.btcommon.BluetoothError as err:
-    # Error handler
-    pass
+    # bluetooth connection
+    nearby_devices = bluetooth.discover_devices(duration=4, lookup_names=True,
+                                                flush_cache=True, lookup_class=False)
+
+    print("Found {} devices".format(len(nearby_devices)))
+
+    for index in range(len(nearby_devices)):
+        try:
+            print("{}   {} - {}".format(index, nearby_devices[index][0], nearby_devices[index][1]))
+        except UnicodeEncodeError:
+            print(
+                "{}   {} - {}".format(index, nearby_devices[index][0],
+                                      nearby_devices[index][1].encode("utf-8", "replace")))
+
+    txt = input("Enter the No. of the device to connect(R for re-scan): ")
+    # print(txt)
+    if txt == 'R':
+        scanBLE()
+
+
+# scanBLE()
+#
+# print(txt)
+# deviceNo = int(txt)
+#
+# name = nearby_devices[deviceNo][1]
+# addr = nearby_devices[deviceNo][0]
+# port = 1
+#
+# connectBLE()
+
+cv.namedWindow('Threshold Control')
 
 cv.createTrackbar('L [BIG]','Threshold Control',lookLeftThreshold,512,nothing)
 cv.createTrackbar('R [SMALL]','Threshold Control',lookRightThreshold,512,nothing)
@@ -156,21 +183,24 @@ while True:
 
     for (x, y, w, h) in faces:
         if dispVisual:
-          cv.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-          cv.putText(frame, 'Face', (x, y + h + 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), labelThickness)
+          cv.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 1)
+          cv.putText(frame, 'Face', (x, y + h + 15),
+                     cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), labelThickness)
         
         locationUpper = int(y+h*eyeDetectionRange)
         
         if displayEyeDetectionBorder and dispVisual:
-          cv.rectangle(frame, (x, y), (x + w, locationUpper), (255, 255, 0), 2)
-          cv.putText(frame, 'Region', (x, y + int(h*eyeDetectionRange + 15)), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), labelThickness)
+          cv.rectangle(frame, (x, y), (x + w, locationUpper), (255, 255, 0), 1)
+          cv.putText(frame, 'Region', (x, y + int(h*eyeDetectionRange + 15)),
+                     cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), labelThickness)
         
         faceImg = grey[(y):(y+h),x:(x+w)]
         
         maxW = int(((w+h)/2)/eyeFaceRatioMax)
         minW = int(((w+h)/2)/eyeFaceRatioMin)
         
-        eyes = eye_cascade.detectMultiScale(faceImg, 1.1, 5,maxSize=(maxW,maxW),minSize=(minW,minW))
+        eyes = eye_cascade.detectMultiScale(faceImg, 1.1, 5, maxSize=(maxW, maxW),
+                                            minSize=(minW, minW))
         normalEyes = normal_eye_cascade.detectMultiScale(grey, 1.3, 5)
         
         finalEyeLocs = []
@@ -180,9 +210,11 @@ while True:
               # print(y1 + y, locationUpper)
               if dispVisual:
                 cv.rectangle(frame,(x1 + x, y1 + y),(x1 + x + w1, y1 + y + h1), (0, 255, 255), 2)
-                cv.putText(frame, 'Eye+', (x1 + x, y1 + y + h1 + 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), labelThickness)
+                cv.putText(frame, 'Eye+', (x1 + x, y1 + y + h1 + 15),
+                           cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255),
+                           labelThickness)
         for (x1, y1, w1, h1) in normalEyes:
-          if dispVisual:
+          if dispVisual and dispUselessVisual:
             cv.rectangle(frame, (x1, y1), (x1+w1,y1+h1), (0, 0, 255), 2)
     
     # if len(eyeImgs) > 1:
@@ -319,6 +351,7 @@ while True:
             cv.imshow("eyeImg1", coloredEyeImgs[1])
 
         globalLocIndexX = xCNT0 + xCNT1
+        globalLocIndexY = yCNT0 + yCNT1
         
         if dispPlot:
           plt.plot(xCNT0 + xCNT1, yCNT0 + yCNT1,"g^")
@@ -330,14 +363,16 @@ while True:
       barThreR = cv.getTrackbarPos('R [SMALL]','Threshold Control')
       barThreL = cv.getTrackbarPos('L [BIG]','Threshold Control')
       
-      if globalLocIndexX < barThreR if useCustomThre else lookRightThreshold:
-        print("Right Threshold Reached \t@GlobalIndex#", globalCounter, "\t@GlobalLoc", globalLocIndexX)
+      if globalLocIndexX < barThreR if useCustomThreshold else lookRightThreshold:
+        print("Right Threshold Reached \t@GlobalIndex#", globalCounter,
+              "\t@GlobalLocX", globalLocIndexX, "\t@GlobalLocY", globalLocIndexY)
         if localCounterR == 0:
           localStartR = globalCounter
         localCounterR += 1
       
-      if globalLocIndexX > barThreL if useCustomThre else lookLeftThreshold:
-        print("Left Threshold Reached \t\t@GlobalIndex#", globalCounter, "\t@GlobalLoc", globalLocIndexX)
+      if globalLocIndexX > barThreL if useCustomThreshold else lookLeftThreshold:
+        print("Left Threshold Reached \t\t@GlobalIndex#", globalCounter,
+              "\t@GlobalLocX", globalLocIndexX, "\t@GlobalLocY", globalLocIndexY)
         if localCounterL == 0:
           localStartL = globalCounter
         localCounterL += 1
@@ -352,7 +387,7 @@ while True:
         
       if localCounterR >= minIdentifyR:
         print(">\tR\t>\tR\t>\tR\t>\tR\t>")
-        s.send("t")
+        # s.send("t")
         localCounterR = 0
       
       if localCounterL >= minIdentifyL:
@@ -393,8 +428,8 @@ while True:
       plt.axis([0, 512, 0, 512])
       plt.show()
     
-    keyvalue = cv.waitKey(20)
-    if keyvalue & 0xff == ord('q'):
+    keyValue = cv.waitKey(20)
+    if keyValue & 0xff == ord('q'):
         break
 
 cam.release()

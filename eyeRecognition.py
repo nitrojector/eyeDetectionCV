@@ -299,6 +299,7 @@ while True:
           plt.plot(xCNT0 + xCNT1, yCNT0 + yCNT1,"g^")
           plt.plot(xCNT0, yCNT0,"ro")
           plt.plot(xCNT1, yCNT1, "bo")
+
         
       # Judging which diretion is being looked at
       
