@@ -13,13 +13,15 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import simple_cb as cba
 
-cameraNo = 1
+cameraNo = 0
 
 cam = cv.VideoCapture(cameraNo)
 v, imagesss = cam.read()
 
-saveImgs = True
+saveImgs = False
+saveFaces = False
 imgCounter = 0
+faceCounter = 0
 
 print('Camera opened')
 
@@ -97,6 +99,11 @@ sobelKSize = 5
 lowThreCanny = 40
 highThreCanny = 70
 
+# Experiment Testing
+eyesFrameErrors = 0
+eyesLocalErrors = 0
+eyesLocalWithScaleErrors = 0
+
 
 def nothing(x):
     pass
@@ -159,6 +166,7 @@ while True:
 
     # The final eye output
     finalEyeLocs = []
+    eyesLocal = []
     normalEyes = []
 
     for (x, y, w, h) in faces:
@@ -174,10 +182,12 @@ while True:
             cv.putText(frame, 'Region', (x, y + int(h * eyeDetectionRange + 15)),
                        cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), labelThickness)
 
-        faceImg = gray[(y):(y + h), x:(x + w)]
+        faceImg = gray[y:(y + h), x:(x + w)]
 
         maxW = int(((w + h) / 2) / eyeFaceRatioMax)
         minW = int(((w + h) / 2) / eyeFaceRatioMin)
+
+        eyesLocal = eye_cascade.detectMultiScale(faceImg, 1.1, 5)
 
         eyes = eye_cascade.detectMultiScale(faceImg, 1.1, 5, maxSize=(maxW, maxW),
                                             minSize=(minW, minW))
@@ -191,12 +201,27 @@ while True:
                 if dispVisual:
                     cv.rectangle(frame, (x1 + x, y1 + y), (x1 + x + w1, y1 + y + h1),
                                  (0, 255, 255), 2)
-                    cv.putText(frame, 'Eye+', (x1 + x, y1 + y + h1 + 15),
+                    cv.putText(frame, 'Eye', (x1 + x, y1 + y + h1 + 15),
                                cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255),
                                labelThickness)
         for (x1, y1, w1, h1) in normalEyes:
             if dispVisual and dispUselessVisual:
                 cv.rectangle(frame, (x1, y1), (x1 + w1, y1 + h1), (0, 0, 255), 2)
+
+    if len(normalEyes) != 2:
+        eyesFrameErrors += 1
+    if len(eyesLocal) != 2:
+        eyesLocalErrors += 1
+    if len(finalEyeLocs) != 2:
+        eyesLocalWithScaleErrors += 1
+
+    if globalCounter >= 600:
+        print("Face Localization Technique Accuracies")
+        print("Whole Frame Identification:\t\t" + str(100 - eyesFrameErrors/globalCounter*100) + "%")
+        print("Local Face Identification:\t\t" + str(100 - eyesLocalErrors/globalCounter*100) + "%")
+        print("Local with Scale Identi. :\t\t" + str(100 - eyesLocalWithScaleErrors/globalCounter*100) + "%")
+        exit(402)
+
 
     if len(finalEyeLocs) > 1:
         if not finalEyeLocs[1][0] > finalEyeLocs[0][1]:
@@ -492,6 +517,9 @@ while True:
     # cv.imshow('Camera', frame)
     frame = cv.resize(frame, (400, 300))
     cv.imshow('Threshold Control', frame)
+    if saveFaces:
+        saveImg(frame, "F", faceCounter)
+        faceCounter += 1
 
     if dispPlot:
         plt.ylabel("Y Loc")
