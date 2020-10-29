@@ -8,7 +8,8 @@ __pycache__/
 
 # Custom
 /1199_44357_bundle_archive.zip
-/项目想法提案.docx
+/*.docx
+/ScreenShots/
 /midway progress.pptx
 .idea
 /docs
