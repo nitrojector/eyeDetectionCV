@@ -1,3 +1,11 @@
+"""
+This program aims to compute statistical comparisons between
+different sub-methods of the entire eye detection process.
+
+Prints a success rate out of a given folder of samples
+"""
+
+
 import os
 import cv2 as cv
 import numpy as np

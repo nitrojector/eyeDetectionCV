@@ -1,9 +1,9 @@
 """
 Created on Sat Jun 22 17:27:58 2020
 
-For the purpose of testing new methods
-
 @author: marti
+
+For the purpose of testing new methods
 """
 
 import cv2 as cv

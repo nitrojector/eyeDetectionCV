@@ -2,6 +2,8 @@
 Created on Sat Jun 13 13:29:12 2020
 
 @author: marti
+
+First draft of eyeRecognition
 """
 
 import cv2 as cv

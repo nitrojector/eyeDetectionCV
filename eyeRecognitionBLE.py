@@ -2,6 +2,10 @@
 Created on Sat Jun 13 13:29:12 2020
 
 @author: marti
+
+Integration of eye detection with sending
+Bluetooth signals signalling recognition
+results
 """
 
 import cv2 as cv
