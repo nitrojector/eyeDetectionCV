@@ -4,7 +4,22 @@ Created on Sat Jun 22 17:27:58 2020
 @author: marti
 
 For the purpose of testing new methods
+
+
+@On start
+request session name
+    folder name for current session to be recorded
+
+@While running
+:key "r"
+    start image saving session
+    methodology: toggle
+
+:key "q"
+    quits the program
+
 """
+import copy
 
 import cv2 as cv
 import os
@@ -13,11 +28,12 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import simple_cb as cba
 
-cameraNo = 0
+cameraNo = 2
 
 cam = cv.VideoCapture(cameraNo)
 v, imagesss = cam.read()
 
+makeFolder = True
 saveImgs = False
 saveFaces = False
 imgCounter = 0
@@ -31,10 +47,10 @@ eye_cascade = cv.CascadeClassifier('mode/haarcascade_eye.xml')
 normal_eye_cascade = cv.CascadeClassifier('mode/haarcascade_eye.xml')
 
 dt = datetime.now()
-t_string = dt.strftime("t%Y%m%d%H%M%S_")
-folder = input("Please enter session id > ")
+t_string = dt.strftime("t%Y%m%d%H%M%S")
+folder = input("Please enter session name ")
 newpath = './imgs/' + folder
-if not os.path.exists(newpath):
+if not os.path.exists(newpath) and makeFolder:
     os.makedirs(newpath)
 
 print(t_string)
@@ -58,6 +74,8 @@ dispPlot = False
 dispViews = False
 
 dispEyes = True
+
+dispAllEyes = False
 
 imgNo = 1
 
@@ -159,7 +177,7 @@ while True:
 
     # Grayscale
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    frameCopy = frame
+    frameCopy = copy.deepcopy(frame)
 
     # Recognize faces in frame for eye reognition limiting
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
@@ -215,13 +233,19 @@ while True:
     if len(finalEyeLocs) != 2:
         eyesLocalWithScaleErrors += 1
 
+    """
     if globalCounter >= 600:
         print("Face Localization Technique Accuracies")
         print("Whole Frame Identification:\t\t" + str(100 - eyesFrameErrors/globalCounter*100) + "%")
         print("Local Face Identification:\t\t" + str(100 - eyesLocalErrors/globalCounter*100) + "%")
         print("Local with Scale Identi. :\t\t" + str(100 - eyesLocalWithScaleErrors/globalCounter*100) + "%")
         exit(402)
+    """
 
+    keyValue = cv.waitKey(20)
+    if keyValue & 0xff == ord('r'):
+        saveImgs = not saveImgs
+        print('saveImgs now = ' + str(saveImgs))
 
     if len(finalEyeLocs) > 1:
         if not finalEyeLocs[1][0] > finalEyeLocs[0][1]:
@@ -246,6 +270,7 @@ while True:
         eyeImgs[1] = cv.resize(eyeImgs[1], (256, 256))
 
         if saveImgs:
+            print('saving image')
             saveImg(coloredEyeImgs[0], "R", imgCounter)
             cv.waitKey(20)
             saveImg(coloredEyeImgs[1], "L", imgCounter)
@@ -444,7 +469,8 @@ while True:
             # eyesL = np.hstack((binaryImg1, binaryGImg1, closed1, closedG1))
             allEyes = np.vstack((eyesL, eyesR))
 
-            cv.imshow("Eyes", allEyes)
+            if dispAllEyes:
+                cv.imshow("Eyes", allEyes)
 
             globalLocIndexX = int(xCNT0 + xCNT1)
             globalLocIndexY = int(yCNT0 + yCNT1)
@@ -462,32 +488,34 @@ while True:
         # print("L", barThreL, "R", barThreR)
 
         if globalLocIndexX < lookRightThreshold:
-            print("Right Threshold Reached \t@GlobalIndex#", globalCounter,
+            if not saveImgs:
+                print("Right Threshold Reached \t@GlobalIndex#", globalCounter,
                   "\t@GlobalLocX", globalLocIndexX, " < ", lookRightThreshold)
             if localCounterR == 0:
                 localStartR = globalCounter
             localCounterR += 1
 
         if globalLocIndexX > lookLeftThreshold:
-            print("Left Threshold Reached \t\t@GlobalIndex#", globalCounter,
+            if not saveImgs:
+                print("Left Threshold Reached \t\t@GlobalIndex#", globalCounter,
                   "\t@GlobalLocX", globalLocIndexX, " > ", lookLeftThreshold)
             if localCounterL == 0:
                 localStartL = globalCounter
             localCounterL += 1
 
         if globalCounter - localStartL > maxDelayIndex:
-            if localCounterL != 0: print("Left COUNTER CLEARED")
+            if localCounterL != 0 and not saveImgs: print("Left COUNTER CLEARED")
             localCounterL = 0
 
         if globalCounter - localStartR > maxDelayIndex:
-            if localCounterR != 0: print("Right COUNTER CLEARED")
+            if localCounterR != 0 and not saveImgs: print("Right COUNTER CLEARED")
             localCounterR = 0
 
-        if localCounterR >= minIdentifyR:
+        if localCounterR >= minIdentifyR and not saveImgs:
             print(">\tR\t>\tR\t>\tR\t>\tR\t>")
             localCounterR = 0
 
-        if localCounterL >= minIdentifyL:
+        if localCounterL >= minIdentifyL and not saveImgs:
             print("<\tL\t<\tL\t<\tL\t<\tL\t<")
             localCounterL = 0
 
