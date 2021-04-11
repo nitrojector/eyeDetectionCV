@@ -16,7 +16,7 @@ from datetime import datetime
 
 
 
-cameraNo = 0
+cameraNo = 2
 
 cam = cv.VideoCapture(cameraNo)
 v, imagesss = cam.read()

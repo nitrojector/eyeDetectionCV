@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import simple_cb as cba
 
-cameraNo = 2
+cameraNo = 1
 
 cam = cv.VideoCapture(cameraNo)
 v, imagesss = cam.read()
@@ -47,8 +47,8 @@ eye_cascade = cv.CascadeClassifier('mode/haarcascade_eye.xml')
 normal_eye_cascade = cv.CascadeClassifier('mode/haarcascade_eye.xml')
 
 dt = datetime.now()
-t_string = dt.strftime("t%Y%m%d%H%M%S")
-folder = input("Please enter session name ")
+t_string = dt.strftime("sess%Y%m%d%H%M%S")
+folder = input("Please enter session name: ")
 newpath = './imgs/' + folder
 if not os.path.exists(newpath) and makeFolder:
     os.makedirs(newpath)
